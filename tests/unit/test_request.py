@@ -1,7 +1,7 @@
-"""Unit tests for request handling."""
+"""Unit tests for the MCPRequest class."""
 
 import pytest
-from src.core.request import MCPRequest, Message
+from src.core.request import MCPRequest
 
 
 def test_request_creation():

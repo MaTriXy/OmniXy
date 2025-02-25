@@ -1,5 +1,5 @@
 import anthropic
-from typing import Dict, List, Optional, Any, Generator, Iterator
+from typing import Optional, Iterator
 from pydantic import BaseModel, Field
 
 from src.core.response import MCPResponse, MCPPartialResponse
@@ -76,7 +76,6 @@ class AnthropicDriver:
         params = AnthropicParameters(**filtered_params)
 
         # Convert max_tokens to max_tokens_to_sample for Anthropic
-        max_tokens = params.max_tokens
         params_dict = params.model_dump(exclude_none=True)
         if "max_tokens" in params_dict:
             params_dict["max_tokens_to_sample"] = params_dict.pop("max_tokens")

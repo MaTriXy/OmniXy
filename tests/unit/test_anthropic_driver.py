@@ -1,6 +1,5 @@
 """Unit tests for the Anthropic driver."""
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 from src.core.request import MCPRequest, Message
