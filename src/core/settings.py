@@ -1,7 +1,6 @@
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field, SecretStr
-import os
 from pathlib import Path
 
 
