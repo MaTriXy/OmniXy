@@ -1,0 +1,31 @@
+[project]
+name = "omnixy"
+version = "0.1.0"
+description = "Universal Model Context Protocol (MCP) Client"
+authors = [{name = "MaTriXy"}]
+dependencies = [
+    "google-generativeai>=0.3.0",
+    "openai>=1.3.6",
+    "cohere>=4.36",
+    "anthropic>=0.22.0",
+    "requests>=2.31.0",
+    "cryptography>=41.0.7",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.5.2",
+    "aiohttp>=3.8.6",
+    "loguru>=0.7.2",
+    "uv>=0.1.2"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-cov>=4.1.0",
+    "bandit>=1.7.7",
+    "mypy>=1.7.0",
+    "types-requests>=2.31.0.1"
+]
+
+[build-system]
+requires = ["uv>=0.1.2"]
+build-backend = "uv.core.build"
