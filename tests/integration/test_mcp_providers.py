@@ -1,11 +1,8 @@
 """Integration tests for MCP providers."""
 
+import os
 import pytest
 from src.client import MCPClient
-from src.drivers.openai_driver import OpenAIDriver
-from src.drivers.cohere_driver import CohereDriver
-from src.drivers.gemini_driver import GeminiDriver
-from src.drivers.anthropic_driver import AnthropicDriver
 from src.core.response import MCPResponse
 
 

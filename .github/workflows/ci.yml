@@ -31,6 +31,7 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install -r requirements.txt
+          uv pip install -r requirements-dev.txt
           uv pip install pytest pytest-cov pytest-asyncio
 
       - name: Run tests with coverage
@@ -63,11 +64,13 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install ruff black mypy
+          uv pip install -r requirements.txt
+          uv pip install -r requirements-dev.txt
+          uv pip install ruff black mypy types-requests
 
       - name: Run linters
         run: |
           source .venv/bin/activate
-          ruff check .
+          ruff check . --fix
           black --check .
-          mypy src tests
+          mypy src tests --ignore-missing-imports

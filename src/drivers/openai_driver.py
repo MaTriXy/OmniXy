@@ -1,5 +1,5 @@
 import openai
-from typing import Dict, List, Optional, Any, Generator, Iterator
+from typing import Optional, Iterator
 from pydantic import BaseModel, Field
 
 from src.core.response import MCPResponse, MCPPartialResponse

@@ -80,8 +80,6 @@ class TestDriverFactory:
 
     def test_config_validation(self):
         """Test configuration validation."""
-        factory = DriverFactory()
-
         # Test valid Anthropic config
         config = AnthropicDriverConfig(api_key="test-key")
         assert config.api_key == "test-key"
