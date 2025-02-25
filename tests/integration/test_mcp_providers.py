@@ -1,6 +1,5 @@
 """Integration tests for MCP providers."""
 
-import os
 import pytest
 from src.client import MCPClient
 from src.core.response import MCPResponse
