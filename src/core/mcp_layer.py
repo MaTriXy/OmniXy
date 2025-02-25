@@ -1,10 +1,10 @@
 import json
 import requests
-from typing import Dict, List, Optional, Any, Iterator, Type, Union
-from pydantic import BaseModel, Field, HttpUrl
+from typing import Dict, Optional, Any, Iterator, Union
+from pydantic import BaseModel, Field
 
 from src.core.response import MCPResponse, MCPPartialResponse
-from src.core.request import MCPRequest, Message
+from src.core.request import MCPRequest
 
 
 class ServerConfig(BaseModel):
