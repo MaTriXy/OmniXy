@@ -14,7 +14,8 @@ dependencies = [
     "pydantic>=2.5.2",
     "aiohttp>=3.8.6",
     "loguru>=0.7.2",
-    "uv>=0.1.2"
+    "uv>=0.1.2",
+    "redis>=5.0.0"
 ]
 
 [project.optional-dependencies]

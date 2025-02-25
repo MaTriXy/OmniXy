@@ -30,9 +30,10 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
+          uv pip compile pyproject.toml --output-file requirements.txt
           uv pip install -r requirements.txt
           uv pip install -r requirements-dev.txt
-          uv pip install pytest pytest-cov pytest-asyncio
+          uv pip install pytest pytest-cov pytest-asyncio redis
 
       - name: Run tests with coverage
         run: |
@@ -64,9 +65,10 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
+          uv pip compile pyproject.toml --output-file requirements.txt
           uv pip install -r requirements.txt
           uv pip install -r requirements-dev.txt
-          uv pip install ruff black mypy types-requests
+          uv pip install ruff black mypy types-requests redis
 
       - name: Run linters
         run: |
