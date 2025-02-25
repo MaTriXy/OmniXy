@@ -31,19 +31,18 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install -r requirements.txt
-          uv pip install -r requirements-dev.txt
           uv pip install pytest pytest-cov pytest-asyncio
 
       - name: Run tests with coverage
         run: |
           source .venv/bin/activate
-          python -m pytest --cov=src tests/ --cov-report=xml --cov-report=term-missing
+          pytest --cov=src tests/ --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   lint:
     runs-on: ubuntu-latest
@@ -64,13 +63,11 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r requirements.txt
-          uv pip install -r requirements-dev.txt
-          uv pip install ruff black mypy types-requests
+          uv pip install ruff black mypy
 
       - name: Run linters
         run: |
           source .venv/bin/activate
-          ruff check . --fix
+          ruff check .
           black --check .
-          mypy src tests --ignore-missing-imports
+          mypy src tests
