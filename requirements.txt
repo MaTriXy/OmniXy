@@ -148,6 +148,9 @@ pydantic==2.10.6
     #   cohere
     #   google-generativeai
     #   openai
+    #   pydantic-settings
+pydantic-settings==2.6.1
+    # via omnixy (pyproject.toml)
 pydantic-core==2.27.2
     # via
     #   cohere
