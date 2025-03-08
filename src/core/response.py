@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field, validator
 
 
 class MCPResponse(BaseModel):
-    """Model Context Protocol Response model for AI completions."""
+    """Model Context Protocol Response model for AI completions and non-LLM service responses."""
 
     text: str = Field(..., description="The generated text response")
     usage: Dict[str, Any] = Field(
-        default_factory=dict, description="Usage information such as token counts"
+        default_factory=dict, description="Usage information such as token counts (for LLM services)"
     )
     model: Optional[str] = Field(None, description="The model used for generation")
     finish_reason: Optional[str] = Field(
@@ -18,6 +18,9 @@ class MCPResponse(BaseModel):
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata about the response"
+    )
+    plugin_data: Dict[str, Any] = Field(
+        default_factory=dict, description="Data from non-LLM services in structured format"
     )
 
     @validator("text")
@@ -54,6 +57,12 @@ class MCPPartialResponse(BaseModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata about the partial response",
+    )
+    is_final: bool = Field(
+        False, description="Whether this is the final chunk in a streaming response"
+    )
+    plugin_data: Dict[str, Any] = Field(
+        default_factory=dict, description="Data from non-LLM services in structured format"
     )
 
     def to_dict(self) -> Dict[str, Any]:

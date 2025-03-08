@@ -8,6 +8,7 @@ from src.drivers.gemini_driver import GeminiDriver
 from src.drivers.openai_driver import OpenAIDriver
 from src.drivers.local_llm_driver import LocalLLMDriver
 from src.drivers.anthropic_driver import AnthropicDriver
+from src.drivers.github_driver import GitHubDriver
 
 
 class BaseDriverConfig(BaseModel):
@@ -48,6 +49,13 @@ class LocalLLMDriverConfig(BaseDriverConfig):
     model_path: Optional[str] = Field(None, description="Path to the local model")
 
 
+class GitHubDriverConfig(BaseDriverConfig):
+    """Configuration for GitHub driver."""
+
+    api_key: Optional[str] = Field(None, description="GitHub API token")
+    base_url: Optional[str] = Field("https://api.github.com", description="GitHub API base URL")
+
+
 class DriverFactory:
     """Factory class for creating MCP drivers."""
 
@@ -60,6 +68,7 @@ class DriverFactory:
             "anthropic": AnthropicDriver,
             "local": LocalLLMDriver,
             "mock": LocalLLMDriver,
+            "github": GitHubDriver,
         }
 
         # Map provider names to their config classes
@@ -70,6 +79,7 @@ class DriverFactory:
             "anthropic": AnthropicDriverConfig,
             "local": LocalLLMDriverConfig,
             "mock": BaseDriverConfig,
+            "github": GitHubDriverConfig,
         }
 
     def register_driver(self, provider_name: str, driver_class: Type):
