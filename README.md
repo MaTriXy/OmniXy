@@ -2,7 +2,7 @@
 <!-- markdownlint-disable MD033 -->
 <div align="center" style="display: flex; align-items: center; justify-content: center;">
   <div>
-    <img src="docs/logo.jpg" width="180" height="180" alt="OmniXy Logo" style="margin-left: 20px;">
+    <img src="docs/logo.jpg" width="180" height="180" alt="OmniXy Logo" style="margin-left: 20px;" title="OmniXy logo - rendered by grok">
     <h1>OmniXy</h1>
     <h2>Universal Model Context Protocol (MCP) Client in python</h2>
   </div>

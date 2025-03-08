@@ -4,13 +4,11 @@ from pydantic import BaseModel, Field
 from src.core.mcp_layer import MCPConnection, ServerConfig
 from src.core.request import MCPRequest, Message
 from src.core.response import MCPResponse, MCPPartialResponse
-from src.drivers.openai_driver import OpenAIDriver
-from src.drivers.cohere_driver import CohereDriver
-from src.drivers.gemini_driver import GeminiDriver
-from src.drivers.local_llm_driver import LocalLLMDriver
-from src.drivers.anthropic_driver import AnthropicDriver
+# Import driver factory instead of individual drivers
+from src.drivers.driver_factory import DriverFactory
 from src.orchestration.chain_of_thought import ChainOfThoughtOrchestrator
 from src.drivers.driver_factory import DriverFactory
+from abc import ABC, abstractmethod
 from src.workflow.workflow_manager import WorkflowManager
 from src.plugin.plugin_manager import PluginManager
 from src.core.settings import get_settings, Settings
@@ -25,7 +23,85 @@ class ClientConfig(BaseModel):
     mock_responses: bool = Field(False, description="Whether to return mock responses")
 
 
-class MCPClient:
+class MCPClientInterface(ABC):
+    """Interface for MCP clients.
+    
+    This abstract base class defines the core interface that all MCP client
+    implementations must provide, ensuring a consistent contract for client behavior.
+    """
+    
+    @abstractmethod
+    def connect(self, server_id: str, **kwargs) -> bool:
+        """Connect to an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to connect to
+            **kwargs: Additional connection parameters
+            
+        Returns:
+            bool: True if the connection was successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def send_request(self, server_id: str, request: MCPRequest) -> MCPResponse:
+        """Send a request to an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to send the request to
+            request: The request to send
+            
+        Returns:
+            MCPResponse: The response from the server
+        """
+        pass
+    
+    @abstractmethod
+    def stream_response(self, server_id: str, request: MCPRequest) -> Iterator[MCPPartialResponse]:
+        """Stream a response from an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to stream from
+            request: The request to send
+            
+        Returns:
+            Iterator[MCPPartialResponse]: An iterator of partial responses
+        """
+        pass
+    
+    @abstractmethod
+    def list_connected_servers(self) -> List[str]:
+        """List all connected servers.
+        
+        Returns:
+            List[str]: A list of server identifiers
+        """
+        pass
+    
+    @abstractmethod
+    def register_server(self, server_id: str, config: Any) -> None:
+        """Register a new server with this client.
+        
+        Args:
+            server_id: Identifier for the server
+            config: Configuration for the server
+        """
+        pass
+    
+    @abstractmethod
+    def disconnect(self, server_id: str) -> bool:
+        """Disconnect from an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to disconnect from
+            
+        Returns:
+            bool: True if the disconnection was successful, False otherwise
+        """
+        pass
+
+
+class MCPClient(MCPClientInterface):
     """Client for the Model Context Protocol."""
 
     def __init__(
@@ -137,47 +213,36 @@ class MCPClient:
         """Register a provider with optional configuration.
 
         Args:
-            provider_name: Name of the provider (e.g., 'openai', 'cohere', 'gemini')
+            provider_name: Name of the provider (e.g., 'openai', 'cohere', 'gemini', 'github')
             config: Configuration for the provider
         """
         if config is None:
             config = {}
 
-        # Automatically enable test_mode if no API key is provided
+        # Automatically enable test_mode if no API key is provided and it's required
         if "api_key" not in config or not config["api_key"]:
             config["test_mode"] = True
             config["mock_responses"] = True
-
-        # Map provider names to their driver classes
-        driver_map = {
-            "openai": OpenAIDriver,
-            "cohere": CohereDriver,
-            "gemini": GeminiDriver,
-            "anthropic": AnthropicDriver,
-            "local": LocalLLMDriver,
-            "mock": LocalLLMDriver,  # Use LocalLLM as a mock for testing
-        }
-
-        if provider_name not in driver_map:
-            raise ValueError(f"Unsupported provider: {provider_name}")
-
-        driver_class = driver_map[provider_name]
-        self.providers[provider_name] = driver_class(config)
-
-        # For backward compatibility with existing code
-        self.driver_factory.register_driver(provider_name, driver_class)
+            
+        # Use the driver factory to create the appropriate driver
+        try:
+            driver = self.driver_factory.create_driver(provider_name, config)
+            self.providers[provider_name] = driver
+        except ValueError as e:
+            raise ValueError(f"Failed to register provider {provider_name}: {str(e)}")
 
     def create_provider(
         self, provider_name: str, provider_config: Dict[str, Any]
     ) -> None:
         """Create a provider with the given configuration.
+        
+        This is an alias for register_provider for backward compatibility.
 
         Args:
             provider_name: Name of the provider
             provider_config: Configuration for the provider
         """
-        driver = self.driver_factory.create_driver(provider_name, provider_config)
-        self.providers[provider_name] = driver
+        return self.register_provider(provider_name, provider_config)
 
     def set_provider(self, provider_name: str) -> None:
         """Set the current provider.
@@ -191,6 +256,53 @@ class MCPClient:
         if provider_name not in self.providers:
             raise ValueError(f"Provider {provider_name} not registered")
         self.current_provider = provider_name
+        
+    # Implement the MCPClientInterface methods
+    
+    def connect(self, server_id: str, **kwargs) -> bool:
+        """Connect to an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to connect to
+            **kwargs: Additional connection parameters
+            
+        Returns:
+            bool: True if the connection was successful, False otherwise
+        """
+        if server_id in self.providers:
+            # Server is already registered as a provider
+            return True
+            
+        # Try to register the server if it's not already registered
+        try:
+            self.register_provider(server_id, kwargs)
+            return True
+        except Exception:
+            return False
+    
+    def list_connected_servers(self) -> List[str]:
+        """List all connected servers/providers.
+        
+        Returns:
+            List[str]: A list of server identifiers
+        """
+        return list(self.providers.keys())
+    
+    def disconnect(self, server_id: str) -> bool:
+        """Disconnect from an MCP server.
+        
+        Args:
+            server_id: Identifier for the server to disconnect from
+            
+        Returns:
+            bool: True if the disconnection was successful, False otherwise
+        """
+        if server_id in self.providers:
+            del self.providers[server_id]
+            if self.current_provider == server_id:
+                self.current_provider = next(iter(self.providers)) if self.providers else None
+            return True
+        return False
 
     def register_workflow(self, workflow_name: str, workflow_func: Callable) -> None:
         """Register a workflow with the client.
