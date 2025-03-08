@@ -20,13 +20,32 @@ class AnthropicParameters(BaseModel):
 class AnthropicDriver:
     def __init__(self, config=None):
         config = config or {}
-        self.test_mode = config.get("test_mode", False)
+        self.test_mode = config.get("test_mode", False) 
         self.mock_responses = config.get("mock_responses", False)
+
+        # Set default values to avoid None
+        self.client = None
 
         # Only initialize the client if not in test mode
         if not self.test_mode and not self.mock_responses:
             api_key = config.get("api_key", "")
-            self.client = anthropic.Anthropic(api_key=api_key)
+            
+            # Create Anthropic client with minimal parameters for compatibility
+            # with different library versions
+            try:
+                # The simplest form that works with most versions
+                self.client = anthropic.Anthropic(api_key=api_key)
+            except Exception as e:
+                if "missing a required argument" in str(e):
+                    # Some versions might require additional args
+                    try:
+                        self.client = anthropic.Anthropic(
+                            api_key=api_key,
+                            base_url="https://api.anthropic.com"
+                        )
+                    except Exception:
+                        # Last attempt with mandatory parameters
+                        self.client = anthropic.Client(api_key=api_key)
 
     def send_request(self, mcp_request: MCPRequest) -> MCPResponse:
         """Send a request to the Anthropic API.

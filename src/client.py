@@ -540,6 +540,38 @@ class MCPClient(MCPClientInterface):
         """
         orchestrator = ChainOfThoughtOrchestrator(client=self)
         return orchestrator.process_request(mcp_request)
+        
+    def send_request(self, server_id: str, request: MCPRequest) -> MCPResponse:
+        """Send a request to an MCP server.
+
+        Args:
+            server_id: Identifier for the server to send the request to
+            request: The request to send
+
+        Returns:
+            MCPResponse: The response from the server
+        """
+        provider = self.providers.get(server_id)
+        if not provider:
+            raise ValueError(f"Provider {server_id} not registered")
+            
+        return provider.send_request(request)
+    
+    def stream_response(self, server_id: str, request: MCPRequest) -> Iterator[MCPPartialResponse]:
+        """Stream a response from an MCP server.
+
+        Args:
+            server_id: Identifier for the server to stream from
+            request: The request to send
+
+        Returns:
+            Iterator[MCPPartialResponse]: An iterator of partial responses
+        """
+        provider = self.providers.get(server_id)
+        if not provider:
+            raise ValueError(f"Provider {server_id} not registered")
+            
+        return provider.stream_tokens(request)
 
 
 if __name__ == "__main__":

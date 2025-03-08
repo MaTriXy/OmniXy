@@ -53,21 +53,15 @@ class GitHubDriver:
         if action == "list_repositories":
             response_data = self._list_repositories(params)
         elif action == "create_issue":
-            # Wrap issue data in a list for consistency
-            issue_data = self._create_issue(params)
-            response_data = [issue_data] if issue_data else []
+            # For create_issue, return the issue data directly
+            response_data = self._create_issue(params)
         elif action == "search_code":
-            # Get search results and extract items as a list
+            # For search_code, return the search results as a dictionary
             search_data = self._search_code(params)
-            # Extract items from search result or create empty list
-            items = (
-                search_data.get("items", []) if isinstance(search_data, dict) else []
-            )
-            response_data = items
+            response_data = search_data
         elif action == "get_repository":
-            # Wrap single repository in a list for consistency
-            repo_data = self._get_repository(params)
-            response_data = [repo_data] if repo_data else []
+            # For get_repository, return the repository data directly
+            response_data = self._get_repository(params)
         else:
             raise ValueError(f"Unsupported GitHub action: {action}")
 

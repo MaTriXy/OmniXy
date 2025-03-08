@@ -52,7 +52,7 @@ class TestAnthropicDriver:
         response = driver.send_request(request)
         assert isinstance(response, MCPResponse)
         assert "mock response from Anthropic" in response.text
-        assert response.model == "claude-3-opus-20240229"
+        assert response.model == "claude-3.7-sonnet"  # Match the model name used in the request
         assert response.finish_reason == "stop"
         assert "total_tokens" in response.usage
 
