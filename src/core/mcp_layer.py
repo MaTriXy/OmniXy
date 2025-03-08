@@ -118,7 +118,8 @@ class MCPLayer:
                 mcp_request.model.split("/")[0] if "/" in mcp_request.model else None
             )
 
-        driver = self.provider_drivers.get(provider)
+        # Handle None case for provider
+        driver = self.provider_drivers.get(provider or "")
         if not driver:
             raise ValueError(f"No driver found for provider: {provider}")
         return driver.send_request(mcp_request)
@@ -142,7 +143,8 @@ class MCPLayer:
                 mcp_request.model.split("/")[0] if "/" in mcp_request.model else None
             )
 
-        driver = self.provider_drivers.get(provider)
+        # Handle None case for provider
+        driver = self.provider_drivers.get(provider or "")
         if not driver:
             raise ValueError(f"No driver found for provider: {provider}")
         return driver.stream_tokens(mcp_request)

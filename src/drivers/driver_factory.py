@@ -53,7 +53,9 @@ class GitHubDriverConfig(BaseDriverConfig):
     """Configuration for GitHub driver."""
 
     api_key: Optional[str] = Field(None, description="GitHub API token")
-    base_url: Optional[str] = Field("https://api.github.com", description="GitHub API base URL")
+    base_url: Optional[str] = Field(
+        "https://api.github.com", description="GitHub API base URL"
+    )
 
 
 class DriverFactory:

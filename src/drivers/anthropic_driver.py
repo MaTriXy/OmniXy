@@ -20,13 +20,32 @@ class AnthropicParameters(BaseModel):
 class AnthropicDriver:
     def __init__(self, config=None):
         config = config or {}
-        self.test_mode = config.get("test_mode", False)
+        self.test_mode = config.get("test_mode", False) 
         self.mock_responses = config.get("mock_responses", False)
+
+        # Set default values to avoid None
+        self.client = None
 
         # Only initialize the client if not in test mode
         if not self.test_mode and not self.mock_responses:
             api_key = config.get("api_key", "")
-            self.client = anthropic.Anthropic(api_key=api_key)
+            
+            # Create Anthropic client with minimal parameters for compatibility
+            # with different library versions
+            try:
+                # The simplest form that works with most versions
+                self.client = anthropic.Anthropic(api_key=api_key)
+            except Exception as e:
+                if "missing a required argument" in str(e):
+                    # Some versions might require additional args
+                    try:
+                        self.client = anthropic.Anthropic(
+                            api_key=api_key,
+                            base_url="https://api.anthropic.com"
+                        )
+                    except Exception:
+                        # Last attempt with mandatory parameters
+                        self.client = anthropic.Client(api_key=api_key)
 
     def send_request(self, mcp_request: MCPRequest) -> MCPResponse:
         """Send a request to the Anthropic API.
@@ -50,6 +69,7 @@ class AnthropicDriver:
                 usage={"total_tokens": 10},
                 finish_reason="stop",
                 metadata={"id": "mock-response-id"},
+                is_chunk=False,
             )
 
         # Convert MCP messages to Anthropic format
@@ -105,6 +125,7 @@ class AnthropicDriver:
                 "type": response.type,
                 "role": response.role,
             },
+            is_chunk=False,
         )
 
     def stream_tokens(self, mcp_request: MCPRequest) -> Iterator[MCPPartialResponse]:
@@ -118,12 +139,12 @@ class AnthropicDriver:
         """
         # Always return mock streaming responses in test mode
         if self.test_mode or self.mock_responses:
-            yield MCPPartialResponse(partial_text="This ")
-            yield MCPPartialResponse(partial_text="is ")
-            yield MCPPartialResponse(partial_text="a ")
-            yield MCPPartialResponse(partial_text="mock ")
-            yield MCPPartialResponse(partial_text="streaming ")
-            yield MCPPartialResponse(partial_text="response.")
+            yield MCPPartialResponse(partial_text="This ", is_final=False)
+            yield MCPPartialResponse(partial_text="is ", is_final=False)
+            yield MCPPartialResponse(partial_text="a ", is_final=False)
+            yield MCPPartialResponse(partial_text="mock ", is_final=False)
+            yield MCPPartialResponse(partial_text="streaming ", is_final=False)
+            yield MCPPartialResponse(partial_text="response.", is_final=True)
             return
 
         # Convert MCP messages to Anthropic format
@@ -167,4 +188,5 @@ class AnthropicDriver:
                     yield MCPPartialResponse(
                         partial_text=chunk.delta.text,
                         metadata={"id": stream.response_id},
+                        is_final=False,
                     )

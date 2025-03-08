@@ -100,7 +100,7 @@ def generate_all_schemas(
             json.dump(
                 {
                     "schemas": list(schemas.keys()),
-                    "generated_at": str(import_time.now()),
+                    "generated_at": str(import_time.datetime.now()),
                     "version": "1.0.0",
                 },
                 f,

@@ -7,7 +7,8 @@ class MCPResponse(BaseModel):
 
     text: str = Field(..., description="The generated text response")
     usage: Dict[str, Any] = Field(
-        default_factory=dict, description="Usage information such as token counts (for LLM services)"
+        default_factory=dict,
+        description="Usage information such as token counts (for LLM services)",
     )
     model: Optional[str] = Field(None, description="The model used for generation")
     finish_reason: Optional[str] = Field(
@@ -20,7 +21,8 @@ class MCPResponse(BaseModel):
         default_factory=dict, description="Additional metadata about the response"
     )
     plugin_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Data from non-LLM services in structured format"
+        default_factory=dict,
+        description="Data from non-LLM services in structured format",
     )
 
     @validator("text")
@@ -39,7 +41,7 @@ class MCPResponse(BaseModel):
         """Create a model from a dictionary."""
         return cls(**data)
 
-    def validate(self) -> bool:
+    def is_valid(self) -> bool:
         """Validate the response parameters."""
         try:
             self.model_validate(self.model_dump())
@@ -62,7 +64,8 @@ class MCPPartialResponse(BaseModel):
         False, description="Whether this is the final chunk in a streaming response"
     )
     plugin_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Data from non-LLM services in structured format"
+        default_factory=dict,
+        description="Data from non-LLM services in structured format",
     )
 
     def to_dict(self) -> Dict[str, Any]:
