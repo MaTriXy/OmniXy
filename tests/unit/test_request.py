@@ -22,7 +22,7 @@ def test_request_validation():
     request = MCPRequest(
         messages=[{"role": "user", "content": "test"}], model="gemini-2.0-flash"
     )
-    assert request.validate() is True
+    assert request.is_valid() is True
 
     # Invalid request - empty messages
     with pytest.raises(ValueError):
@@ -71,4 +71,4 @@ def test_request_stream_handling():
         stream=True,
     )
     assert request.stream is True
-    assert request.validate() is True
+    assert request.is_valid() is True

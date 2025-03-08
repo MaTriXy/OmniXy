@@ -18,7 +18,7 @@ def test_response_validation():
     """Test response validation."""
     # Valid response
     response = MCPResponse(text="Test response", usage={"total_tokens": 10})
-    assert response.validate() is True
+    assert response.is_valid() is True
 
     # Invalid response - empty text
     with pytest.raises(ValueError):
@@ -57,7 +57,7 @@ def test_response_stream_chunk():
     """Test response streaming chunk handling."""
     chunk = MCPResponse(text="partial ", usage={"total_tokens": 5}, is_chunk=True)
     assert chunk.is_chunk is True
-    assert chunk.validate() is True
+    assert chunk.is_valid() is True
 
 
 def test_response_metadata():

@@ -41,7 +41,7 @@ class MCPResponse(BaseModel):
         """Create a model from a dictionary."""
         return cls(**data)
 
-    def validate(self) -> bool:
+    def is_valid(self) -> bool:
         """Validate the response parameters."""
         try:
             self.model_validate(self.model_dump())

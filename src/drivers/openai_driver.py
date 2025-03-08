@@ -55,6 +55,7 @@ class OpenAIDriver:
                 usage={"total_tokens": 10},
                 finish_reason="stop",
                 metadata={"id": "mock-response-id"},
+                is_chunk=False
             )
 
         # Only make API calls if not in test mode
@@ -90,6 +91,7 @@ class OpenAIDriver:
                 "id": response.id,
                 "created": response.created,
             },
+            is_chunk=False
         )
 
     def stream_tokens(self, mcp_request: MCPRequest) -> Iterator[MCPPartialResponse]:
@@ -103,12 +105,12 @@ class OpenAIDriver:
         """
         # Always return mock streaming responses in test mode
         if self.test_mode or self.mock_responses:
-            yield MCPPartialResponse(partial_text="This ")
-            yield MCPPartialResponse(partial_text="is ")
-            yield MCPPartialResponse(partial_text="a ")
-            yield MCPPartialResponse(partial_text="mock ")
-            yield MCPPartialResponse(partial_text="streaming ")
-            yield MCPPartialResponse(partial_text="response.")
+            yield MCPPartialResponse(partial_text="This ", is_final=False)
+            yield MCPPartialResponse(partial_text="is ", is_final=False)
+            yield MCPPartialResponse(partial_text="a ", is_final=False)
+            yield MCPPartialResponse(partial_text="mock ", is_final=False)
+            yield MCPPartialResponse(partial_text="streaming ", is_final=False)
+            yield MCPPartialResponse(partial_text="response.", is_final=True)
             return
 
         # Extract parameters from the request and validate with Pydantic
@@ -141,4 +143,5 @@ class OpenAIDriver:
                 yield MCPPartialResponse(
                     partial_text=chunk.choices[0].delta.content,
                     metadata={"id": chunk.id},
+                    is_final=False
                 )

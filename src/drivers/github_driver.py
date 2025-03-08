@@ -53,11 +53,19 @@ class GitHubDriver:
         if action == "list_repositories":
             response_data = self._list_repositories(params)
         elif action == "create_issue":
-            response_data = self._create_issue(params)
+            # Wrap issue data in a list for consistency
+            issue_data = self._create_issue(params)
+            response_data = [issue_data] if issue_data else []
         elif action == "search_code":
-            response_data = self._search_code(params)
+            # Get search results and extract items as a list
+            search_data = self._search_code(params)
+            # Extract items from search result or create empty list
+            items = search_data.get("items", []) if isinstance(search_data, dict) else []
+            response_data = items
         elif action == "get_repository":
-            response_data = self._get_repository(params)
+            # Wrap single repository in a list for consistency
+            repo_data = self._get_repository(params)
+            response_data = [repo_data] if repo_data else []
         else:
             raise ValueError(f"Unsupported GitHub action: {action}")
 
@@ -70,6 +78,9 @@ class GitHubDriver:
                 "timestamp": "2025-03-08T12:00:00Z",
             },
             plugin_data={"github_data": response_data},
+            model="github",
+            finish_reason="success",
+            is_chunk=False
         )
 
     def _list_repositories(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -82,9 +93,16 @@ class GitHubDriver:
             ]
 
         # Real implementation would call the GitHub API
+        if self.session is None:
+            self._initialize_session()
+        if self.session is None:  # Still None after initialization
+            raise RuntimeError("Failed to initialize session")
         response = self.session.get(f"{self.base_url}/user/repos", params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        if isinstance(result, list):
+            return result
+        return []  # Return empty list if result is not a list
 
     def _get_repository(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Get a specific repository's details."""
@@ -106,6 +124,10 @@ class GitHubDriver:
             }
 
         # Real implementation would call the GitHub API
+        if self.session is None:
+            self._initialize_session()
+        if self.session is None:  # Still None after initialization
+            raise RuntimeError("Failed to initialize session")
         response = self.session.get(f"{self.base_url}/repos/{repo}")
         response.raise_for_status()
         return response.json()
@@ -131,6 +153,10 @@ class GitHubDriver:
 
         # Real implementation would call the GitHub API
         payload = {"title": title, "body": body}
+        if self.session is None:
+            self._initialize_session()
+        if self.session is None:  # Still None after initialization
+            raise RuntimeError("Failed to initialize session")
         response = self.session.post(
             f"{self.base_url}/repos/{repo}/issues", json=payload
         )
@@ -155,6 +181,10 @@ class GitHubDriver:
             }
 
         # Real implementation would call the GitHub API
+        if self.session is None:
+            self._initialize_session()
+        if self.session is None:  # Still None after initialization
+            raise RuntimeError("Failed to initialize session")
         response = self.session.get(f"{self.base_url}/search/code", params={"q": query})
         response.raise_for_status()
         return response.json()
