@@ -60,7 +60,9 @@ class GitHubDriver:
             # Get search results and extract items as a list
             search_data = self._search_code(params)
             # Extract items from search result or create empty list
-            items = search_data.get("items", []) if isinstance(search_data, dict) else []
+            items = (
+                search_data.get("items", []) if isinstance(search_data, dict) else []
+            )
             response_data = items
         elif action == "get_repository":
             # Wrap single repository in a list for consistency
@@ -80,7 +82,7 @@ class GitHubDriver:
             plugin_data={"github_data": response_data},
             model="github",
             finish_reason="success",
-            is_chunk=False
+            is_chunk=False,
         )
 
     def _list_repositories(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:

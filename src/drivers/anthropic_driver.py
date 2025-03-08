@@ -50,7 +50,7 @@ class AnthropicDriver:
                 usage={"total_tokens": 10},
                 finish_reason="stop",
                 metadata={"id": "mock-response-id"},
-                is_chunk=False
+                is_chunk=False,
             )
 
         # Convert MCP messages to Anthropic format
@@ -106,7 +106,7 @@ class AnthropicDriver:
                 "type": response.type,
                 "role": response.role,
             },
-            is_chunk=False
+            is_chunk=False,
         )
 
     def stream_tokens(self, mcp_request: MCPRequest) -> Iterator[MCPPartialResponse]:
@@ -169,5 +169,5 @@ class AnthropicDriver:
                     yield MCPPartialResponse(
                         partial_text=chunk.delta.text,
                         metadata={"id": stream.response_id},
-                        is_final=False
+                        is_final=False,
                     )

@@ -55,7 +55,7 @@ class OpenAIDriver:
                 usage={"total_tokens": 10},
                 finish_reason="stop",
                 metadata={"id": "mock-response-id"},
-                is_chunk=False
+                is_chunk=False,
             )
 
         # Only make API calls if not in test mode
@@ -91,7 +91,7 @@ class OpenAIDriver:
                 "id": response.id,
                 "created": response.created,
             },
-            is_chunk=False
+            is_chunk=False,
         )
 
     def stream_tokens(self, mcp_request: MCPRequest) -> Iterator[MCPPartialResponse]:
@@ -143,5 +143,5 @@ class OpenAIDriver:
                 yield MCPPartialResponse(
                     partial_text=chunk.choices[0].delta.content,
                     metadata={"id": chunk.id},
-                    is_final=False
+                    is_final=False,
                 )

@@ -158,31 +158,45 @@ class MCPClient(MCPClientInterface):
         # Initialize with proper typing using a typed dict
         provider_config: Dict[str, Any] = {
             "test_mode": bool(config.test_mode or self.settings.test_mode),
-            "mock_responses": bool(config.mock_responses)
+            "mock_responses": bool(config.mock_responses),
         }
 
         # Add API key from settings if available
         if provider == "openai" and self.settings.api.openai_api_key:
             # Add API key to the config dict with proper typing
-            provider_config["api_key"] = str(self.settings.api.openai_api_key.get_secret_value())
-            
+            provider_config["api_key"] = str(
+                self.settings.api.openai_api_key.get_secret_value()
+            )
+
             # Add organization if available
             if self.settings.api.openai_organization:
-                provider_config["organization"] = str(self.settings.api.openai_organization)
+                provider_config["organization"] = str(
+                    self.settings.api.openai_organization
+                )
         elif provider == "cohere" and self.settings.api.cohere_api_key:
             # Add API key to the config dict with proper typing
-            provider_config["api_key"] = str(self.settings.api.cohere_api_key.get_secret_value())
+            provider_config["api_key"] = str(
+                self.settings.api.cohere_api_key.get_secret_value()
+            )
         elif provider == "gemini" and self.settings.api.gemini_api_key:
             # Add API key to the config dict with proper typing
-            provider_config["api_key"] = str(self.settings.api.gemini_api_key.get_secret_value())
+            provider_config["api_key"] = str(
+                self.settings.api.gemini_api_key.get_secret_value()
+            )
         elif provider == "anthropic" and self.settings.api.anthropic_api_key:
             # Add API key to the config dict with proper typing
-            provider_config["api_key"] = str(self.settings.api.anthropic_api_key.get_secret_value())
+            provider_config["api_key"] = str(
+                self.settings.api.anthropic_api_key.get_secret_value()
+            )
 
         # Override with config API key if provided
         if config.api_key:
             # Handle both SecretStr and str cases
-            api_key_str = config.api_key.get_secret_value() if hasattr(config.api_key, 'get_secret_value') else config.api_key
+            api_key_str = (
+                config.api_key.get_secret_value()
+                if hasattr(config.api_key, "get_secret_value")
+                else config.api_key
+            )
             provider_config["api_key"] = str(api_key_str)
 
         # Register the provider
@@ -409,7 +423,7 @@ class MCPClient(MCPClientInterface):
             # Use provider to process the request
             effective_model = model if model is not None else ""
             effective_provider = provider_name if provider_name is not None else ""
-            
+
             mcp_request = MCPRequest(
                 provider=effective_provider,
                 model=effective_model,
@@ -425,7 +439,7 @@ class MCPClient(MCPClientInterface):
         else:
             # Send request without provider
             effective_model = model if model is not None else ""
-            
+
             mcp_request = MCPRequest(
                 provider="",  # Empty provider string
                 model=effective_model,
@@ -495,7 +509,7 @@ class MCPClient(MCPClientInterface):
         # Create a request object
         if model is None:
             raise ValueError("Model must be provided")
-            
+
         mcp_request = MCPRequest(
             provider=provider_name or "",  # Ensure provider is not None
             model=model or "",  # Ensure model is not None
@@ -509,7 +523,7 @@ class MCPClient(MCPClientInterface):
         # Use the provider to process the request
         if provider is None:
             raise ValueError("Provider cannot be None")
-            
+
         # Now that we've checked, we can safely use the provider
         if stream:
             return provider.stream_tokens(mcp_request)
