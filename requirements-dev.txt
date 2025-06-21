@@ -173,6 +173,8 @@ pytest==8.3.4
     # via
     #   omnixy (pyproject.toml)
     #   pytest-cov
+pytest-asyncio==0.23.7 # Added for async test support
+    # via omnixy (pyproject.toml) # Assuming it would be added to pyproject.toml then compiled
 pytest-cov==6.0.0
     # via omnixy (pyproject.toml)
 python-dotenv==1.0.1

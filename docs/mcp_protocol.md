@@ -1,179 +1,193 @@
-# Model Context Protocol (MCP)
+# Model Context Protocol (MCP) v2025-06-18
 
-This document outlines the message structures used for communication within the OmniXy system, adhering to the Model Context Protocol (MCP).
+This document outlines the message structures used for communication within the OmniXy system, adhering to the Model Context Protocol (MCP) specification version 2025-06-18. MCP uses JSON-RPC 2.0 for message transport.
 
-## Core Message Objects
+## JSON-RPC Core Concepts
 
-### MCPRequest
+All MCP communication occurs via JSON-RPC messages. There are three main types:
 
-- Defines the prompt or message to send
-- Key attributes:
+1.  **Request (`JSONRPCRequest`)**: An operation invoked by the sender that expects a response from the receiver. It includes `jsonrpc`, `id`, `method`, and `params`.
+2.  **Response (`JSONRPCResponse` / `JSONRPCErrorResponse`)**: The reply to a Request. It includes `jsonrpc`, `id`, and either `result` (for success) or `error` (for failure).
+3.  **Notification (`JSONRPCNotification`)**: An operation invoked by the sender that does *not* expect a response. It includes `jsonrpc`, `method`, and `params`.
 
-  ```python
-  class MCPRequest:
-      model: str  # Name of the LLM (e.g., "gpt-4", "gemini-pro")
-      messages: List[Dict]  # List of role-based messages
-      context: Optional[Dict]  # Context from previous steps
-      parameters: Dict  # Model-specific parameters
-      metadata: Dict  # Request metadata
-      plugin_data: Optional[Dict]  # Plugin-specific data
-  ```
+## Key MCP Structures (Python Pydantic Models)
 
-### MCPResponse
+The Python implementation uses Pydantic models, largely mirroring the [official TypeScript schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts).
 
-- Contains the LLM's completion and metadata
-- Key attributes:
+### Common Base Models
 
-  ```python
-  class MCPResponse:
-      text: str  # Completed text from LLM
-      metadata: Dict  # Response metadata
-          tokens_used: int
-          timestamp: datetime
-          model: str
-          provider: str
-      error: Optional[Dict]  # Error information if present
-      plugin_data: Optional[Dict]  # Plugin-specific data
-  ```
+-   `BaseMetadata`: Contains `name` and optional `title`.
+-   `Implementation`: Extends `BaseMetadata` with `version`.
+-   `RequestParams`: Base for parameters in requests, includes optional `_meta` (e.g., for `progressToken`).
+-   `BaseResult`: Base for results in responses, includes optional `_meta`.
+-   `Annotations`: Optional metadata like `audience`, `priority`, `lastModified`.
 
-### MCPPartialResponse
+### Initialization Flow
 
-- For streaming token-based responses
-- Key attributes:
+1.  **Client -> Server: `InitializeRequest`**
+    -   `method: "initialize"`
+    -   `params`:
+        -   `protocolVersion`: Client's supported MCP version.
+        -   `capabilities`: `ClientCapabilities` (what the client can do, e.g., `roots`, `sampling`, `elicitation`).
+        -   `clientInfo`: `Implementation` details of the client.
+2.  **Server -> Client: `InitializeResult`** (within `JSONRPCResponse`)
+    -   `result`:
+        -   `protocolVersion`: Server's chosen MCP version.
+        -   `capabilities`: `ServerCapabilities` (what the server offers, e.g., `logging`, `prompts`, `resources`, `tools`).
+        -   `serverInfo`: `Implementation` details of the server.
+        -   `instructions` (optional): How to use the server.
+3.  **Client -> Server: `InitializedNotification`**
+    -   `method: "notifications/initialized"`
+    -   Signals that the client is ready.
 
-  ```python
-  class MCPPartialResponse:
-      partial_text: str  # Partial completion
-      is_final: bool  # Whether this is the final chunk
-      metadata: Dict  # Partial response metadata
-      error: Optional[Dict]  # Error information if present
-  ```
+### Core Features (Server-Offered)
 
-## Workflow Message Objects
+#### Resources
 
-### WorkflowRequest
+-   **`ListResourcesRequest`** (Client -> Server): Asks for available resources.
+    -   `method: "resources/list"`
+    -   Supports pagination (`cursor`).
+-   **`ListResourcesResult`** (Server -> Client): Provides a list of `Resource` objects.
+    -   `Resource`: `uri`, `description`, `mimeType`, `annotations`, `size`.
+-   **`ReadResourceRequest`** (Client -> Server): Asks to read a specific resource.
+    -   `method: "resources/read"`
+    -   `params`: `uri`.
+-   **`ReadResourceResult`** (Server -> Client): Provides resource content.
+    -   `contents`: List of `TextResourceContents` (`text`) or `BlobResourceContents` (`blob`).
+-   **Notifications**:
+    -   `notifications/resources/list_changed`: Server informs client that resource list changed.
+    -   `notifications/resources/updated`: Server informs client that a subscribed resource changed (after `resources/subscribe` request).
 
-- Defines a workflow execution request
-- Key attributes:
+#### Prompts
 
-  ```python
-  class WorkflowRequest:
-      workflow_id: str  # Unique workflow identifier
-      steps: List[Dict]  # List of workflow steps
-      config: Dict  # Workflow configuration
-      context: Dict  # Workflow context
-      metadata: Dict  # Workflow metadata
-  ```
+-   **`ListPromptsRequest`** (Client -> Server): Asks for available prompts/templates.
+    -   `method: "prompts/list"`
+-   **`ListPromptsResult`** (Server -> Client): Provides a list of `Prompt` objects.
+    -   `Prompt`: `name`, `description`, `arguments` (`PromptArgument`: `name`, `description`, `required`).
+-   **`GetPromptRequest`** (Client -> Server): Asks for a specific prompt.
+    -   `method: "prompts/get"`
+    -   `params`: `name`, optional `arguments` for templating.
+-   **`GetPromptResult`** (Server -> Client): Provides the prompt.
+    -   `messages`: List of `PromptMessage` (`role`, `content` which is `ContentBlock`).
+        -   `ContentBlock`: Can be `TextContent`, `ImageContent`, `AudioContent`, `ResourceLink`, or `EmbeddedResource`.
+-   **Notification**: `notifications/prompts/list_changed`.
 
-### WorkflowResponse
+#### Tools
 
-- Contains workflow execution results
-- Key attributes:
+-   **`ListToolsRequest`** (Client -> Server): Asks for available tools.
+    -   `method: "tools/list"`
+-   **`ListToolsResult`** (Server -> Client): Provides a list of `Tool` objects.
+    -   `Tool`: `name`, `description`, `inputSchema`, `outputSchema` (JSON schema), `annotations` (`ToolAnnotations` like `readOnlyHint`, `destructiveHint`).
+-   **`CallToolRequest`** (Client -> Server): Invokes a tool.
+    -   `method: "tools/call"`
+    -   `params`: `name`, optional `arguments`.
+-   **`CallToolResult`** (Server -> Client): Result of the tool call.
+    -   `content`: List of `ContentBlock`.
+    -   `structuredContent` (optional): JSON object.
+    -   `isError` (optional): Boolean.
+-   **Notification**: `notifications/tools/list_changed`.
 
-  ```python
-  class WorkflowResponse:
-      workflow_id: str  # Workflow identifier
-      status: str  # Workflow status
-      step_results: List[Dict]  # Results from each step
-      errors: List[Dict]  # Any errors encountered
-      metadata: Dict  # Execution metadata
-  ```
+### Client Features (May be Requested by Server)
 
-### WorkflowStepResult
+#### Sampling (LLM Interaction via Client)
 
-- Results from a single workflow step
-- Key attributes:
+-   **`CreateMessageRequest`** (Server -> Client): Server asks client to query an LLM.
+    -   `method: "sampling/createMessage"`
+    -   `params`:
+        -   `messages`: List of `SamplingMessage` (`role`, `content` which is `TextContent`, `ImageContent`, or `AudioContent`).
+        -   `modelPreferences`: `ModelPreferences` (`hints`, `costPriority`, `speedPriority`, `intelligencePriority`).
+        -   `systemPrompt`, `temperature`, `maxTokens`, etc.
+-   **`CreateMessageResult`** (Client -> Server): Client's LLM response.
+    -   Inherits `SamplingMessage` fields (`role`, `content`).
+    -   `model`: Name of the model used.
+    -   `stopReason`.
 
-  ```python
-  class WorkflowStepResult:
-      step_id: str  # Step identifier
-      status: str  # Step status
-      result: Any  # Step execution result
-      error: Optional[Dict]  # Error if step failed
-      metadata: Dict  # Step execution metadata
-  ```
+#### Roots (Filesystem Boundaries)
 
-## Plugin Message Objects
+-   **`ListRootsRequest`** (Server -> Client): Server asks for root URIs (e.g., project directories).
+    -   `method: "roots/list"`
+-   **`ListRootsResult`** (Client -> Server): Client provides a list of `Root` objects.
+    -   `Root`: `uri` (e.g., `file:///path/to/dir`), `name`.
+-   **Notification**: `notifications/roots/list_changed` (Client -> Server).
 
-### PluginRequest
+#### Elicitation (Requesting User Input)
 
-- Request to a plugin
-- Key attributes:
+-   **`ElicitRequest`** (Server -> Client): Server asks client to get input from the user.
+    -   `method: "elicitation/create"`
+    -   `params`: `message` (to show user), `requestedSchema` (simplified JSON schema for the form).
+-   **`ElicitResult`** (Client -> Server): User's response.
+    -   `action`: `"accept"`, `"decline"`, or `"cancel"`.
+    -   `content` (if "accept"): User-provided data.
 
-  ```python
-  class PluginRequest:
-      plugin_id: str  # Plugin identifier
-      action: str  # Action to perform
-      parameters: Dict  # Action parameters
-      context: Dict  # Plugin context
-  ```
+### Other Important MCP Messages
 
-### PluginResponse
+#### Notifications (General)
 
-- Response from a plugin
-- Key attributes:
+-   **`CancelledNotification`**: Sent by either side to cancel an in-flight request.
+    -   `method: "notifications/cancelled"`, `params: { requestId, reason }`
+-   **`ProgressNotification`**: Out-of-band progress updates for long-running requests.
+    -   `method: "notifications/progress"`, `params: { progressToken, progress, total, message }`
 
-  ```python
-  class PluginResponse:
-      plugin_id: str  # Plugin identifier
-      status: str  # Execution status
-      result: Any  # Action result
-      error: Optional[Dict]  # Error information
-      metadata: Dict  # Plugin metadata
-  ```
+#### Logging
 
-## Context Management
+-   **`SetLevelRequest`** (Client -> Server): Client requests a specific logging level.
+    -   `method: "logging/setLevel"`, `params: { level }`
+-   **`LoggingMessageNotification`** (Server -> Client): Server sends a log message.
+    -   `method: "notifications/message"`, `params: { level, logger, data }`
 
-### Chain-of-Thought Context
+#### Ping/Pong
 
-- Maintain context store in memory/Redis/database
-- Support context windowing and pruning
-- Configurable visibility modes:
-  - `visible`: For debugging/advanced usage
-  - `hidden`: For provider compliance
+-   **`PingRequest`**: Sent by either side to check connectivity.
+    -   `method: "ping"`
+-   The receiver responds with an `EmptyResult` for a "pong".
 
-### Workflow Context
+## Streaming Responses
 
-- Persistent workflow state storage
-- Cross-step data sharing
-- Support for parallel execution contexts
+The MCP spec primarily uses notifications (like `notifications/progress` or custom notifications) for streaming. The previous `MCPPartialResponse` from this codebase is not a standard JSON-RPC message but can be adapted to be part of a notification's `params` if partial streaming of content is needed (e.g., token by token from an LLM).
 
-### Plugin Context
+```python
+class MCPPartialResponse(BaseModel):
+    """
+    Represents a piece of a streaming response.
+    This is NOT a standard JSON-RPC message type.
+    It would typically be part of a `notifications/progress` `params` or a custom notification.
+    """
+    partial_text: Optional[str] = None
+    data_chunk: Optional[Any] = None
+    is_final_chunk: bool = Field(default=False)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    error: Optional[Dict[str, Any]] = None
+```
 
-- Plugin-specific state management
-- Cross-plugin communication
-- Secure context isolation
-
-## Message Flow
+## Message Flow (High-Level Example)
 
 ```mermaid
 sequenceDiagram
-    participant App
-    participant Workflow
-    participant Plugin
-    participant Provider
+    participant ClientApp as Client Application
+    participant MCPServer as MCP Compliant Server
 
-    App->>Workflow: WorkflowRequest
-    Workflow->>Plugin: PluginRequest
-    Plugin->>Provider: MCPRequest
-    Provider-->>Plugin: MCPResponse
-    Plugin-->>Workflow: PluginResponse
-    Workflow-->>App: WorkflowResponse
+    ClientApp->>MCPServer: JSONRPCRequest (method: "initialize", params: InitializeRequestParams, id: 1)
+    MCPServer-->>ClientApp: JSONRPCResponse (result: InitializeResult, id: 1)
+    ClientApp->>MCPServer: JSONRPCNotification (method: "notifications/initialized")
+
+    ClientApp->>MCPServer: JSONRPCRequest (method: "tools/list", id: 2)
+    MCPServer-->>ClientApp: JSONRPCResponse (result: ListToolsResult, id: 2)
+
+    ClientApp->>MCPServer: JSONRPCRequest (method: "tools/call", params: CallToolRequestParams {name: "example_tool"}, id: 3)
+    MCPServer-->>ClientApp: JSONRPCResponse (result: CallToolResult, id: 3)
+
+    %% Example of server-initiated request (if client supports sampling)
+    MCPServer->>ClientApp: JSONRPCRequest (method: "sampling/createMessage", params: CreateMessageRequestParams, id: 101)
+    ClientApp-->>MCPServer: JSONRPCResponse (result: CreateMessageResult, id: 101)
 ```
 
-## Best Practices
+## Best Practices (Aligned with MCP Spec)
 
-1. **Message Validation**
-   - Validate all message attributes
-   - Check type constraints
-   - Verify required fields
+1.  **Message Validation**: Adhere strictly to the defined Pydantic models which are based on the MCP JSON schema.
+2.  **Error Handling**: Use `JSONRPCErrorResponse` with appropriate error codes (e.g., `-32600 Invalid Request`, `-32601 Method not found`, `-32602 Invalid params`, `-32603 Internal error`) and messages. Tool-specific errors should often be reported within a successful `CallToolResult` by setting `isError: true`.
+3.  **Security and Trust & Safety**: Implementors MUST follow the guidelines in the MCP specification regarding user consent, data privacy, tool safety, and LLM sampling controls.
+4.  **Capabilities Negotiation**: Utilize the `capabilities` exchange during initialization to determine supported features.
+5.  **Cancellation**: Support `notifications/cancelled` for long-running operations.
+6.  **Progress Reporting**: Use `notifications/progress` for operations that take time.
 
-2. **Error Handling**
-   - Use structured error objects
-   - Include error context
-   - Support error recovery
-
-3. **Context Management**
-   - Implement proper cleanup
-   - Handle context limits
-   - Secure sensitive data
+This document provides an overview. For authoritative details, always refer to the [official MCP Specification v2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/) and its [TypeScript schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts).
